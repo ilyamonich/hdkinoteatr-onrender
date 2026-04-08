@@ -8,10 +8,37 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 
 const BASE_URL = 'https://www.hdkinoteatr.com';
-
-// URL каталога и поиска (можно переопределить через переменные окружения)
 const CATALOG_URL = process.env.CATALOG_URL || `${BASE_URL}/catalog/`;
 const SEARCH_URL_TEMPLATE = process.env.SEARCH_URL_TEMPLATE || `${BASE_URL}/index.php?do=search&subaction=search&q={query}`;
+
+// Кэш для страниц фильмов (на 1 час)
+const cache = new Map();
+const CACHE_TTL = 60 * 60 * 1000; // 1 час
+
+// Один экземпляр браузера для всех запросов
+let browserInstance = null;
+let browserInitPromise = null;
+
+async function getBrowser() {
+  if (browserInstance && browserInstance.isConnected()) {
+    return browserInstance;
+  }
+  if (browserInitPromise) {
+    return browserInitPromise;
+  }
+  browserInitPromise = puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    headless: 'new'
+  }).then(browser => {
+    browserInstance = browser;
+    browserInitPromise = null;
+    return browserInstance;
+  }).catch(err => {
+    browserInitPromise = null;
+    throw err;
+  });
+  return browserInitPromise;
+}
 
 // --------------------------------------------------------------
 // 1. Вспомогательная функция загрузки HTML через axios (для списков)
@@ -80,34 +107,37 @@ function parseMoviesList(html, pageUrl) {
 }
 
 // --------------------------------------------------------------
-// 3. Парсер страницы фильма/сериала с использованием Puppeteer
+// 3. Парсер страницы фильма/сериала с переиспользованием браузера
 // --------------------------------------------------------------
 async function parseMoviePage(url) {
-  let browser;
+  // Проверяем кэш
+  const cached = cache.get(url);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    console.log(`[CACHE] Использую кэш для ${url}`);
+    return cached.data;
+  }
+
+  let page = null;
   try {
-    console.log(`[Puppeteer] Загружаем страницу: ${url}`);
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] // необходимо для работы на Render
-    });
-    const page = await browser.newPage();
+    console.log(`[PUPPETEER] Загружаю страницу: ${url}`);
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    
+    // Устанавливаем таймаут загрузки 30 секунд
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Ждём появления iframe (максимум 10 секунд)
-    await page.waitForSelector('iframe', { timeout: 10000 }).catch(() => console.log('Iframe не найден за 10 секунд'));
-
-    // Извлекаем данные из страницы
+    
+    // Ждём iframe не более 10 секунд
+    await page.waitForSelector('iframe', { timeout: 10000 }).catch(() => console.log('Iframe не найден, продолжаем...'));
+    
     const data = await page.evaluate(() => {
       let iframeSrc = null;
       const iframe = document.querySelector('iframe');
-      if (iframe && iframe.src) {
-        iframeSrc = iframe.src;
-      }
-      // Если iframe не найден, пробуем найти video source
+      if (iframe && iframe.src) iframeSrc = iframe.src;
       if (!iframeSrc) {
         const video = document.querySelector('video source');
         if (video && video.src) iframeSrc = video.src;
       }
-      // Парсинг сезонов и серий (для сериалов)
+      
       const seasons = [];
       document.querySelectorAll('.season-block, .seasons-list, .seasons').forEach(block => {
         block.querySelectorAll('.season, .season-item').forEach(seasonEl => {
@@ -123,28 +153,32 @@ async function parseMoviePage(url) {
       });
       return { iframeSrc, seasons };
     });
-
+    
+    await page.close();
+    
+    let result = null;
     if (data.seasons && data.seasons.length > 0) {
-      return { type: 'series', seasons: data.seasons, iframeSrc: data.iframeSrc || null };
+      result = { type: 'series', seasons: data.seasons, iframeSrc: data.iframeSrc || null };
     } else if (data.iframeSrc) {
-      return { type: 'movie', iframeSrc: data.iframeSrc };
+      result = { type: 'movie', iframeSrc: data.iframeSrc };
     } else {
-      console.error(`[Puppeteer] Не удалось найти плеер на странице: ${url}`);
+      console.error(`[PUPPETEER] Не найден плеер на странице: ${url}`);
       return null;
     }
+    
+    // Сохраняем в кэш
+    cache.set(url, { timestamp: Date.now(), data: result });
+    return result;
   } catch (error) {
-    console.error(`[Puppeteer] Ошибка при обработке ${url}:`, error.message);
+    console.error(`[PUPPETEER] Ошибка при обработке ${url}:`, error.message);
+    if (page) await page.close().catch(e => console.log(e));
     return null;
-  } finally {
-    if (browser) await browser.close();
   }
 }
 
 // --------------------------------------------------------------
 // 4. API маршруты
 // --------------------------------------------------------------
-
-// Поиск фильмов
 app.get('/api/search', async (req, res) => {
   const query = req.query.q;
   if (!query) return res.json([]);
@@ -160,7 +194,6 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// Список фильмов (каталог)
 app.get('/api/movies', async (req, res) => {
   const html = await fetchHTML(CATALOG_URL);
   if (!html) {
@@ -170,7 +203,6 @@ app.get('/api/movies', async (req, res) => {
   res.json(movies);
 });
 
-// Детальная страница фильма/сериала
 app.get('/api/movie/:id', async (req, res) => {
   const id = req.params.id;
   let url;
@@ -178,27 +210,28 @@ app.get('/api/movie/:id', async (req, res) => {
     url = Buffer.from(id, 'base64').toString('utf8');
     console.log(`Декодирован URL: ${url}`);
   } catch (e) {
-    console.error('Ошибка декодирования base64:', e);
     return res.status(400).json({ error: 'Неверный ID' });
   }
-
   if (!url || !url.startsWith(BASE_URL)) {
-    console.warn(`URL не начинается с ${BASE_URL}: ${url}`);
     return res.status(400).json({ error: 'Некорректная ссылка' });
   }
-
   const details = await parseMoviePage(url);
   if (!details) {
-    return res.status(404).json({ error: 'Не удалось получить данные со страницы. Возможно, плеер защищён или страница изменилась.' });
+    return res.status(404).json({ error: 'Не удалось получить данные со страницы' });
   }
   res.json(details);
 });
 
-// --------------------------------------------------------------
-// 5. Запуск сервера
-// --------------------------------------------------------------
+// Graceful shutdown: закрываем браузер при остановке сервера
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing browser...');
+  if (browserInstance) await browserInstance.close();
+  process.exit(0);
+});
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
   console.log(`Каталог: ${CATALOG_URL}`);
   console.log(`Шаблон поиска: ${SEARCH_URL_TEMPLATE}`);
+  console.log(`Puppeteer браузер будет создан при первом запросе к фильму`);
 });
