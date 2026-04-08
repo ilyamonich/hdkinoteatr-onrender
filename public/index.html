@@ -6,159 +6,32 @@
   <title>HDKinoTeatr · Каталог фильмов</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto;
-      background: #0f0f1a;
-      color: #ededed;
-      padding-bottom: 3rem;
-    }
-    header {
-      background: linear-gradient(135deg, #1a1f2e, #0b0d16);
-      padding: 1.2rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      border-bottom: 1px solid #2a2f3f;
-    }
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
-    .logo {
-      font-size: 1.8rem;
-      font-weight: bold;
-      background: linear-gradient(135deg, #ffb347, #ff6b6b);
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-    }
-    .search-bar {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      flex-wrap: wrap;
-    }
-    .search-bar input {
-      flex: 1;
-      padding: 0.8rem 1.2rem;
-      border-radius: 60px;
-      border: none;
-      background: #2a2f3f;
-      color: white;
-      font-size: 1rem;
-      outline: none;
-    }
-    .search-bar button {
-      background: #ff8c42;
-      border: none;
-      padding: 0 1.8rem;
-      border-radius: 60px;
-      font-weight: bold;
-      font-size: 1rem;
-      cursor: pointer;
-      color: #0f0f1a;
-    }
-    .main-layout {
-      display: flex;
-      gap: 2rem;
-      margin-top: 2rem;
-    }
-    .sidebar {
-      flex: 0 0 250px;
-      background: #1a1e2a;
-      border-radius: 1rem;
-      padding: 1rem;
-      height: fit-content;
-      position: sticky;
-      top: 100px;
-    }
-    .sidebar h3 {
-      font-size: 1.2rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid #2a2f3f;
-    }
-    .categories-list {
-      list-style: none;
-    }
-    .categories-list li {
-      margin-bottom: 0.6rem;
-    }
-    .category-link {
-      color: #aaa;
-      text-decoration: none;
-      cursor: pointer;
-      display: block;
-      padding: 0.3rem 0;
-      transition: 0.2s;
-    }
-    .category-link:hover {
-      color: #ff8c42;
-      padding-left: 0.5rem;
-    }
-    .movies-area {
-      flex: 1;
-    }
-    .movies-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1.5rem;
-    }
-    .movie-card {
-      background: #1e1e2a;
-      border-radius: 1rem;
-      overflow: hidden;
-      transition: transform 0.2s;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    }
-    .movie-card:hover {
-      transform: translateY(-6px);
-    }
-    .poster {
-      width: 100%;
-      aspect-ratio: 2 / 3;
-      object-fit: cover;
-      background: #2c2c3a;
-    }
-    .info {
-      padding: 0.8rem;
-    }
-    .title {
-      font-weight: 600;
-      font-size: 1rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 0.4rem;
-      font-size: 0.8rem;
-      color: #aaa;
-    }
-    .loading, .error {
-      text-align: center;
-      padding: 3rem;
-      font-size: 1.2rem;
-    }
-    .error {
-      color: #ff8a7a;
-      background: #2a1215;
-      border-radius: 1rem;
-    }
-    footer {
-      text-align: center;
-      margin-top: 3rem;
-      color: #5a5f72;
-      font-size: 0.8rem;
-    }
-    @media (max-width: 768px) {
-      .main-layout { flex-direction: column; }
-      .sidebar { position: static; flex: auto; margin-bottom: 1rem; }
-    }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto; background: #0f0f1a; color: #ededed; padding-bottom: 3rem; }
+    header { background: linear-gradient(135deg, #1a1f2e, #0b0d16); padding: 1.2rem 2rem; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2a2f3f; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
+    .logo { font-size: 1.8rem; font-weight: bold; background: linear-gradient(135deg, #ffb347, #ff6b6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
+    .search-bar { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+    .search-bar input { flex: 1; padding: 0.8rem 1.2rem; border-radius: 60px; border: none; background: #2a2f3f; color: white; font-size: 1rem; outline: none; }
+    .search-bar button { background: #ff8c42; border: none; padding: 0 1.8rem; border-radius: 60px; font-weight: bold; font-size: 1rem; cursor: pointer; color: #0f0f1a; }
+    .main-layout { display: flex; gap: 2rem; margin-top: 2rem; }
+    .sidebar { flex: 0 0 250px; background: #1a1e2a; border-radius: 1rem; padding: 1rem; height: fit-content; position: sticky; top: 100px; }
+    .sidebar h3 { font-size: 1.2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #2a2f3f; }
+    .categories-list { list-style: none; }
+    .categories-list li { margin-bottom: 0.6rem; }
+    .category-link { color: #aaa; text-decoration: none; cursor: pointer; display: block; padding: 0.3rem 0; transition: 0.2s; }
+    .category-link:hover { color: #ff8c42; padding-left: 0.5rem; }
+    .movies-area { flex: 1; }
+    .movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+    .movie-card { background: #1e1e2a; border-radius: 1rem; overflow: hidden; transition: transform 0.2s; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+    .movie-card:hover { transform: translateY(-6px); }
+    .poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; background: #2c2c3a; }
+    .info { padding: 0.8rem; }
+    .title { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meta { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.8rem; color: #aaa; }
+    .loading, .error { text-align: center; padding: 3rem; font-size: 1.2rem; }
+    .error { color: #ff8a7a; background: #2a1215; border-radius: 1rem; }
+    footer { text-align: center; margin-top: 3rem; color: #5a5f72; font-size: 0.8rem; }
+    @media (max-width: 768px) { .main-layout { flex-direction: column; } .sidebar { position: static; flex: auto; margin-bottom: 1rem; } }
   </style>
 </head>
 <body>
@@ -192,7 +65,6 @@
   const searchBtn = document.getElementById('searchBtn');
   const categoriesList = document.getElementById('categoriesList');
 
-  // Загрузка категорий
   async function loadCategories() {
     try {
       const res = await fetch('/api/categories');
@@ -205,7 +77,6 @@
       categoriesList.innerHTML = cats.map(cat => `
         <li><a class="category-link" data-url="${cat.link}">${escapeHtml(cat.name)}</a></li>
       `).join('');
-      // Обработчики кликов по категориям
       document.querySelectorAll('.category-link').forEach(link => {
         link.addEventListener('click', () => {
           const url = link.dataset.url;
@@ -217,8 +88,7 @@
     }
   }
 
-  // Загрузка фильмов по URL (каталог, категория, поиск)
-  async function loadMovies(url, title = 'Фильмы') {
+  async function loadMovies(url) {
     moviesArea.innerHTML = '<div class="loading">Загрузка...</div>';
     try {
       const res = await fetch(url);
@@ -235,10 +105,6 @@
   }
 
   function renderMovies(movies) {
-    if (!movies.length) {
-      moviesArea.innerHTML = '<div class="error">Нет фильмов</div>';
-      return;
-    }
     const html = `<div class="movies-grid">${movies.map(m => `
       <div class="movie-card" data-link="${escapeHtml(m.link)}">
         <img class="poster" src="${escapeHtml(m.poster)}" alt="${escapeHtml(m.title)}" loading="lazy" onerror="this.src='/placeholder.jpg'">
@@ -249,7 +115,6 @@
       </div>
     `).join('')}</div>`;
     moviesArea.innerHTML = html;
-    // Клик по карточке – открыть страницу фильма в новой вкладке
     document.querySelectorAll('.movie-card').forEach(card => {
       card.addEventListener('click', () => {
         const link = card.dataset.link;
@@ -259,9 +124,7 @@
   }
 
   async function loadCategoryMovies(categoryUrl) {
-    // categoryUrl может быть относительным или абсолютным
-    let apiUrl = `/api/category?url=${encodeURIComponent(categoryUrl)}`;
-    await loadMovies(apiUrl, 'Фильмы категории');
+    await loadMovies(`/api/category?url=${encodeURIComponent(categoryUrl)}`);
   }
 
   async function searchMovies(query) {
@@ -269,12 +132,11 @@
       loadCatalog();
       return;
     }
-    const apiUrl = `/api/search?q=${encodeURIComponent(query)}`;
-    await loadMovies(apiUrl, 'Результаты поиска');
+    await loadMovies(`/api/search?q=${encodeURIComponent(query)}`);
   }
 
   async function loadCatalog() {
-    await loadMovies('/api/movies', 'Каталог фильмов');
+    await loadMovies('/api/movies');
   }
 
   function escapeHtml(str) {
@@ -287,13 +149,11 @@
     });
   }
 
-  // События
   searchBtn.addEventListener('click', () => searchMovies(searchInput.value));
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') searchMovies(searchInput.value);
   });
 
-  // Инициализация
   loadCategories();
   loadCatalog();
 </script>
