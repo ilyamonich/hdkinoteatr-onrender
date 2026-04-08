@@ -1,0 +1,19 @@
+{
+    "headline": "HDKinoTeatr Viewer",
+    "parameter": "",
+    "dictionary": "",
+    "pages": [
+        {
+            "controls": [
+                {
+                    "0,0,5,1": {
+                        "image": "https://hdkinoteatr-onrender.onrender.com/icon.png",
+                        "label": "HDKinoTeatr Viewer",
+                        "action": "link:https://hdkinoteatr-onrender.onrender.com/",
+                        "description": "Просмотр фильмов и сериалов с hdkinoteatr.com"
+                    }
+                }
+            ]
+        }
+    ]
+}
