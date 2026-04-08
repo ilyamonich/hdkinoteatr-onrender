@@ -3,28 +3,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const app = express();
-// Render передаёт порт через переменную окружения PORT
 const PORT = process.env.PORT || 3000;
-
-// Раздаём статические файлы из папки public
 app.use(express.static('public'));
 
 const BASE_URL = 'https://www.hdkinoteatr.com';
-
-// Селекторы (можно при необходимости подстроить под актуальную вёрстку)
-const SELECTORS = {
-  movieCard: '.movie-item, .film-item, .item',
-  title: '.title, .name, h3',
-  poster: 'img',
-  year: '.year, .date',
-  rating: '.rating, .imdb',
-  link: 'a',
-  iframePlayer: 'iframe',
-  seasonBlock: '.season-block, .seasons',
-  seasonItem: '.season',
-  episodeItem: '.episode',
-  episodeLink: 'a'
-};
 
 async function fetchHTML(url) {
   try {
@@ -41,36 +23,50 @@ async function fetchHTML(url) {
   }
 }
 
+// Универсальный парсер, ищет любые ссылки с картинками
 function parseMoviesList(html, pageUrl) {
   const $ = cheerio.load(html);
   const movies = [];
 
-  $(SELECTORS.movieCard).each((i, el) => {
-    const $card = $(el);
-    let title = $card.find(SELECTORS.title).first().text().trim();
-    const poster = $card.find(SELECTORS.poster).attr('src');
-    const year = $card.find(SELECTORS.year).first().text().trim();
-    const rating = $card.find(SELECTORS.rating).first().text().trim();
-    let link = $card.find(SELECTORS.link).attr('href');
+  $('a').each((i, el) => {
+    const $a = $(el);
+    const $img = $a.find('img');
+    if ($img.length === 0) return;
 
-    if (!title && $card.find('a').first().attr('title')) {
-      title = $card.find('a').first().attr('title');
-    }
+    let title = $a.attr('title') || $img.attr('alt') || $a.find('h3, .title, .name').first().text().trim();
+    if (!title) return;
+
+    let poster = $img.attr('src');
+    let link = $a.attr('href');
     if (link && !link.startsWith('http')) {
       link = BASE_URL + (link.startsWith('/') ? link : '/' + link);
     }
-    if (title) {
-      movies.push({
-        id: Buffer.from(link).toString('base64'),
-        title,
-        poster: poster && poster.startsWith('http') ? poster : (poster ? BASE_URL + poster : '/placeholder.jpg'),
-        year: year || '—',
-        rating: rating || '—',
-        link
-      });
-    }
+    if (!link || link === BASE_URL + '/') return;
+
+    const $parent = $a.closest('div, article, li');
+    let year = $parent.find('.year, .date, .info-year, .date-year').first().text().trim() || '—';
+    let rating = $parent.find('.rating, .imdb, .rate, .stars').first().text().trim() || '—';
+
+    movies.push({
+      id: Buffer.from(link).toString('base64'),
+      title,
+      poster: poster && poster.startsWith('http') ? poster : (poster ? BASE_URL + poster : '/placeholder.jpg'),
+      year,
+      rating,
+      link
+    });
   });
-  return movies;
+
+  // Убираем дубликаты
+  const unique = [];
+  const seen = new Set();
+  for (const m of movies) {
+    if (!seen.has(m.link)) {
+      seen.add(m.link);
+      unique.push(m);
+    }
+  }
+  return unique.slice(0, 60);
 }
 
 async function parseMoviePage(url) {
@@ -79,7 +75,7 @@ async function parseMoviePage(url) {
   const $ = cheerio.load(html);
 
   let iframeSrc = null;
-  const $iframe = $(SELECTORS.iframePlayer).first();
+  const $iframe = $('iframe').first();
   if ($iframe.length) {
     iframeSrc = $iframe.attr('src');
     if (iframeSrc && !iframeSrc.startsWith('http')) {
@@ -87,28 +83,29 @@ async function parseMoviePage(url) {
     }
   }
 
+  // Поиск сезонов (универсально)
   const seasons = [];
-  const $seasonsBlock = $(SELECTORS.seasonBlock);
-  if ($seasonsBlock.length) {
-    $seasonsBlock.find(SELECTORS.seasonItem).each((sIdx, seasonEl) => {
-      const seasonName = $(seasonEl).find('.season-title').text().trim() || `Сезон ${sIdx + 1}`;
+  $('.season-block, .seasons-list, .seasons').each((i, block) => {
+    const $block = $(block);
+    $block.find('.season, .season-item').each((sIdx, seasonEl) => {
+      const seasonName = $(seasonEl).find('.season-title, .title').text().trim() || `Сезон ${sIdx + 1}`;
       const episodes = [];
-      $(seasonEl).find(SELECTORS.episodeItem).each((eIdx, epEl) => {
-        const epTitle = $(epEl).find('.episode-title').text().trim() || `Серия ${eIdx + 1}`;
-        let epLink = $(epEl).find(SELECTORS.episodeLink).attr('href');
+      $(seasonEl).find('.episode, .episode-item, .series-item').each((eIdx, epEl) => {
+        const epTitle = $(epEl).find('.episode-title, .title').text().trim() || `Серия ${eIdx + 1}`;
+        let epLink = $(epEl).find('a').attr('href');
         if (epLink && !epLink.startsWith('http')) {
           epLink = BASE_URL + (epLink.startsWith('/') ? epLink : '/' + epLink);
         }
         episodes.push({ title: epTitle, link: epLink });
       });
-      seasons.push({ name: seasonName, episodes });
+      if (episodes.length) seasons.push({ name: seasonName, episodes });
     });
-  }
+  });
 
-  if (seasons.length === 0 && iframeSrc) {
-    return { type: 'movie', iframeSrc };
-  } else if (seasons.length > 0) {
+  if (seasons.length > 0) {
     return { type: 'series', seasons, iframeSrc: iframeSrc || null };
+  } else if (iframeSrc) {
+    return { type: 'movie', iframeSrc };
   }
   return null;
 }
@@ -129,21 +126,21 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// API: список фильмов (главная страница /filmy)
+// API: список фильмов (пробуем несколько возможных адресов)
 app.get('/api/movies', async (req, res) => {
-  try {
-    const catalogUrl = `${BASE_URL}/filmy`;
-    const html = await fetchHTML(catalogUrl);
-    if (!html) return res.json([]);
-    const movies = parseMoviesList(html, catalogUrl);
-    res.json(movies);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Ошибка загрузки списка' });
+  const possibleUrls = [`${BASE_URL}/filmy`, `${BASE_URL}/movies`, `${BASE_URL}/catalog`, `${BASE_URL}/`];
+  let movies = [];
+  for (const url of possibleUrls) {
+    const html = await fetchHTML(url);
+    if (html) {
+      movies = parseMoviesList(html, url);
+      if (movies.length > 0) break;
+    }
   }
+  res.json(movies);
 });
 
-// API: детали фильма/сериала
+// API: детали
 app.get('/api/movie/:id', async (req, res) => {
   const id = req.params.id;
   let url;
@@ -162,7 +159,4 @@ app.get('/api/movie/:id', async (req, res) => {
   res.json(details);
 });
 
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
