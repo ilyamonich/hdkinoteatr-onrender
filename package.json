@@ -1,7 +1,7 @@
 {
-  "name": "kinogo-pro-viewer",
+  "name": "hdkinoteatr-viewer",
   "version": "1.0.0",
-  "description": "Веб-приложение для просмотра фильмов с kinogo.pro",
+  "description": "Веб-приложение для просмотра фильмов с hdkinoteatr.com",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
