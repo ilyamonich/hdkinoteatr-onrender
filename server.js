@@ -4,7 +4,12 @@ const cheerio = require('cheerio');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Раздаём статические файлы из public (ваше веб-приложение)
 app.use(express.static('public'));
+
+// Раздаём файлы из папки msx по пути /msx (для start.json и content.json)
+app.use('/msx', express.static('msx'));
 
 const BASE_URL = 'https://www.hdkinoteatr.com';
 const CATALOG_URL = process.env.CATALOG_URL || `${BASE_URL}/catalog/`;
