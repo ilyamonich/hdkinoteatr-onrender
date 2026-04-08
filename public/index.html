@@ -1,71 +1,300 @@
-<!-- Вставьте этот код в public/index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HDKinoTeatr · Каталог фильмов</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto; background: #0f0f1a; color: #ededed; padding-bottom: 3rem; }
-    header { background: linear-gradient(135deg, #1a1f2e, #0b0d16); padding: 1.5rem 2rem; position: sticky; top: 0; z-index: 10; }
-    .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
-    .logo { font-size: 1.8rem; font-weight: bold; background: linear-gradient(135deg, #ffb347, #ff6b6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
-    .search-bar { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
-    .search-bar input { flex: 1; padding: 0.8rem 1.2rem; border-radius: 60px; border: none; background: #2a2f3f; color: white; font-size: 1rem; outline: none; }
-    .search-bar button { background: #ff8c42; border: none; padding: 0 1.8rem; border-radius: 60px; font-weight: bold; font-size: 1rem; cursor: pointer; color: #0f0f1a; }
-    .movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.8rem; margin: 2rem 0; }
-    .movie-card { background: #1e1e2a; border-radius: 1.2rem; overflow: hidden; transition: transform 0.2s; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
-    .movie-card:hover { transform: translateY(-6px); }
-    .poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; background: #2c2c3a; }
-    .info { padding: 0.8rem; }
-    .title { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .meta { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.8rem; color: #aaa; }
-    .loading, .error { text-align: center; padding: 3rem; font-size: 1.2rem; }
-    .error { color: #ff8a7a; background: #2a1215; border-radius: 1rem; }
-    footer { text-align: center; margin-top: 3rem; color: #5a5f72; font-size: 0.8rem; }
-    @media (max-width: 640px) { .movies-grid { gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto;
+      background: #0f0f1a;
+      color: #ededed;
+      padding-bottom: 3rem;
+    }
+    header {
+      background: linear-gradient(135deg, #1a1f2e, #0b0d16);
+      padding: 1.2rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid #2a2f3f;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+    .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #ffb347, #ff6b6b);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+    .search-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .search-bar input {
+      flex: 1;
+      padding: 0.8rem 1.2rem;
+      border-radius: 60px;
+      border: none;
+      background: #2a2f3f;
+      color: white;
+      font-size: 1rem;
+      outline: none;
+    }
+    .search-bar button {
+      background: #ff8c42;
+      border: none;
+      padding: 0 1.8rem;
+      border-radius: 60px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      color: #0f0f1a;
+    }
+    .main-layout {
+      display: flex;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .sidebar {
+      flex: 0 0 250px;
+      background: #1a1e2a;
+      border-radius: 1rem;
+      padding: 1rem;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+    .sidebar h3 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #2a2f3f;
+    }
+    .categories-list {
+      list-style: none;
+    }
+    .categories-list li {
+      margin-bottom: 0.6rem;
+    }
+    .category-link {
+      color: #aaa;
+      text-decoration: none;
+      cursor: pointer;
+      display: block;
+      padding: 0.3rem 0;
+      transition: 0.2s;
+    }
+    .category-link:hover {
+      color: #ff8c42;
+      padding-left: 0.5rem;
+    }
+    .movies-area {
+      flex: 1;
+    }
+    .movies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+    .movie-card {
+      background: #1e1e2a;
+      border-radius: 1rem;
+      overflow: hidden;
+      transition: transform 0.2s;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    .movie-card:hover {
+      transform: translateY(-6px);
+    }
+    .poster {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      background: #2c2c3a;
+    }
+    .info {
+      padding: 0.8rem;
+    }
+    .title {
+      font-weight: 600;
+      font-size: 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+    .loading, .error {
+      text-align: center;
+      padding: 3rem;
+      font-size: 1.2rem;
+    }
+    .error {
+      color: #ff8a7a;
+      background: #2a1215;
+      border-radius: 1rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: #5a5f72;
+      font-size: 0.8rem;
+    }
+    @media (max-width: 768px) {
+      .main-layout { flex-direction: column; }
+      .sidebar { position: static; flex: auto; margin-bottom: 1rem; }
+    }
   </style>
 </head>
 <body>
-<header><div class="container"><div class="logo">🎬 HDKinoTeatr · Viewer</div>
-<div class="search-bar"><input type="text" id="searchInput" placeholder="Поиск фильмов..."><button id="searchBtn">Найти</button></div></div></header>
-<main class="container" id="app"><div class="loading">Загрузка...</div></main>
-<footer class="container">При клике на фильм вы перейдёте на сайт hdkinoteatr.com.</footer>
+<header>
+  <div class="container">
+    <div class="logo">🎬 HDKinoTeatr · Viewer</div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Поиск фильмов...">
+      <button id="searchBtn">Найти</button>
+    </div>
+  </div>
+</header>
+<div class="container main-layout">
+  <aside class="sidebar" id="sidebar">
+    <h3>📂 Категории</h3>
+    <ul class="categories-list" id="categoriesList">
+      <li>Загрузка...</li>
+    </ul>
+  </aside>
+  <main class="movies-area" id="moviesArea">
+    <div class="loading">Загрузка фильмов...</div>
+  </main>
+</div>
+<footer class="container">
+  При клике на фильм вы перейдёте на сайт hdkinoteatr.com. Категории загружены с главной страницы.
+</footer>
+
 <script>
-  const appEl = document.getElementById('app');
+  const moviesArea = document.getElementById('moviesArea');
   const searchInput = document.getElementById('searchInput');
   const searchBtn = document.getElementById('searchBtn');
-  async function loadCatalog() {
-    appEl.innerHTML = '<div class="loading">Загрузка...</div>';
+  const categoriesList = document.getElementById('categoriesList');
+
+  // Загрузка категорий
+  async function loadCategories() {
     try {
-      const res = await fetch('/api/movies');
+      const res = await fetch('/api/categories');
+      if (!res.ok) throw new Error('Ошибка загрузки категорий');
+      const cats = await res.json();
+      if (cats.length === 0) {
+        categoriesList.innerHTML = '<li>Нет категорий</li>';
+        return;
+      }
+      categoriesList.innerHTML = cats.map(cat => `
+        <li><a class="category-link" data-url="${cat.link}">${escapeHtml(cat.name)}</a></li>
+      `).join('');
+      // Обработчики кликов по категориям
+      document.querySelectorAll('.category-link').forEach(link => {
+        link.addEventListener('click', () => {
+          const url = link.dataset.url;
+          if (url) loadCategoryMovies(url);
+        });
+      });
+    } catch (err) {
+      categoriesList.innerHTML = `<li>Ошибка: ${err.message}</li>`;
+    }
+  }
+
+  // Загрузка фильмов по URL (каталог, категория, поиск)
+  async function loadMovies(url, title = 'Фильмы') {
+    moviesArea.innerHTML = '<div class="loading">Загрузка...</div>';
+    try {
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Ошибка сервера');
       const movies = await res.json();
-      if (!movies.length) { appEl.innerHTML = '<div class="error">Фильмы не найдены. Возможно, сайт изменил структуру.</div>'; return; }
+      if (!movies.length) {
+        moviesArea.innerHTML = '<div class="error">Фильмы не найдены.</div>';
+        return;
+      }
       renderMovies(movies);
-    } catch(e) { appEl.innerHTML = `<div class="error">Ошибка: ${e.message}</div>`; }
+    } catch (err) {
+      moviesArea.innerHTML = `<div class="error">Ошибка: ${err.message}</div>`;
+    }
   }
-  async function searchMovies(q) {
-    if (!q.trim()) return loadCatalog();
-    appEl.innerHTML = '<div class="loading">Поиск...</div>';
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      const movies = await res.json();
-      if (!movies.length) { appEl.innerHTML = '<div class="error">Ничего не найдено.</div>'; return; }
-      renderMovies(movies);
-    } catch(e) { appEl.innerHTML = `<div class="error">Ошибка поиска: ${e.message}</div>`; }
-  }
+
   function renderMovies(movies) {
-    appEl.innerHTML = `<div class="movies-grid">${movies.map(m => `
+    if (!movies.length) {
+      moviesArea.innerHTML = '<div class="error">Нет фильмов</div>';
+      return;
+    }
+    const html = `<div class="movies-grid">${movies.map(m => `
       <div class="movie-card" data-link="${escapeHtml(m.link)}">
         <img class="poster" src="${escapeHtml(m.poster)}" alt="${escapeHtml(m.title)}" loading="lazy" onerror="this.src='/placeholder.jpg'">
-        <div class="info"><div class="title">${escapeHtml(m.title)}</div><div class="meta"><span>${escapeHtml(m.year)}</span><span>⭐ ${escapeHtml(m.rating)}</span></div></div>
-      </div>`).join('')}</div>`;
-    document.querySelectorAll('.movie-card').forEach(card => card.addEventListener('click', () => { if(card.dataset.link) window.open(card.dataset.link, '_blank'); }));
+        <div class="info">
+          <div class="title">${escapeHtml(m.title)}</div>
+          <div class="meta"><span>${escapeHtml(m.year)}</span><span>⭐ ${escapeHtml(m.rating)}</span></div>
+        </div>
+      </div>
+    `).join('')}</div>`;
+    moviesArea.innerHTML = html;
+    // Клик по карточке – открыть страницу фильма в новой вкладке
+    document.querySelectorAll('.movie-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const link = card.dataset.link;
+        if (link) window.open(link, '_blank');
+      });
+    });
   }
-  function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
-  searchBtn.onclick = () => searchMovies(searchInput.value);
-  searchInput.onkeypress = e => { if(e.key === 'Enter') searchMovies(searchInput.value); };
+
+  async function loadCategoryMovies(categoryUrl) {
+    // categoryUrl может быть относительным или абсолютным
+    let apiUrl = `/api/category?url=${encodeURIComponent(categoryUrl)}`;
+    await loadMovies(apiUrl, 'Фильмы категории');
+  }
+
+  async function searchMovies(query) {
+    if (!query.trim()) {
+      loadCatalog();
+      return;
+    }
+    const apiUrl = `/api/search?q=${encodeURIComponent(query)}`;
+    await loadMovies(apiUrl, 'Результаты поиска');
+  }
+
+  async function loadCatalog() {
+    await loadMovies('/api/movies', 'Каталог фильмов');
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // События
+  searchBtn.addEventListener('click', () => searchMovies(searchInput.value));
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') searchMovies(searchInput.value);
+  });
+
+  // Инициализация
+  loadCategories();
   loadCatalog();
 </script>
 </body>
