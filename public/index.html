@@ -10,14 +10,12 @@
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
       background: #0f0f1a;
       color: #ededed;
       padding-bottom: 3rem;
     }
-
     header {
       background: linear-gradient(135deg, #1a1f2e, #0b0d16);
       padding: 1.5rem 2rem;
@@ -26,31 +24,26 @@
       top: 0;
       z-index: 10;
     }
-
     .container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 0 1.5rem;
     }
-
     .logo {
       font-size: 1.8rem;
       font-weight: bold;
-      letter-spacing: -0.5px;
       background: linear-gradient(135deg, #ffb347, #ff6b6b);
       background-clip: text;
       -webkit-background-clip: text;
       color: transparent;
       display: inline-block;
     }
-
     .search-bar {
       display: flex;
       gap: 0.75rem;
       margin-top: 1rem;
       flex-wrap: wrap;
     }
-
     .search-bar input {
       flex: 1;
       padding: 0.8rem 1.2rem;
@@ -60,14 +53,11 @@
       color: white;
       font-size: 1rem;
       outline: none;
-      transition: 0.2s;
     }
-
     .search-bar input:focus {
       background: #3a4052;
       box-shadow: 0 0 0 2px #ff8c42;
     }
-
     .search-bar button {
       background: #ff8c42;
       border: none;
@@ -76,22 +66,14 @@
       font-weight: bold;
       font-size: 1rem;
       cursor: pointer;
-      transition: 0.2s;
       color: #0f0f1a;
     }
-
-    .search-bar button:hover {
-      background: #ffa25c;
-      transform: scale(1.02);
-    }
-
     .movies-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 1.8rem;
       margin: 2rem 0;
     }
-
     .movie-card {
       background: #1e1e2a;
       border-radius: 1.2rem;
@@ -100,23 +82,19 @@
       cursor: pointer;
       box-shadow: 0 8px 20px rgba(0,0,0,0.3);
     }
-
     .movie-card:hover {
       transform: translateY(-6px);
       box-shadow: 0 16px 28px rgba(0,0,0,0.4);
     }
-
     .poster {
       width: 100%;
       aspect-ratio: 2 / 3;
       object-fit: cover;
       background: #2c2c3a;
     }
-
     .info {
       padding: 0.8rem;
     }
-
     .title {
       font-weight: 600;
       font-size: 1rem;
@@ -124,7 +102,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
     .meta {
       display: flex;
       justify-content: space-between;
@@ -132,78 +109,12 @@
       font-size: 0.8rem;
       color: #aaa;
     }
-
-    .player-view {
-      background: #000;
-      border-radius: 1rem;
-      overflow: hidden;
-      margin: 1.5rem 0;
-      aspect-ratio: 16 / 9;
-    }
-
-    .player-view iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    .back-button {
-      background: #2a2f3f;
-      border: none;
-      color: white;
-      padding: 0.5rem 1.2rem;
-      border-radius: 40px;
-      cursor: pointer;
-      margin: 1rem 0;
-      font-size: 0.9rem;
-    }
-
-    .seasons {
-      margin-top: 1.5rem;
-    }
-
-    .season {
-      margin-bottom: 1.8rem;
-      background: #191e2a;
-      border-radius: 1rem;
-      padding: 1rem;
-    }
-
-    .season-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin-bottom: 0.8rem;
-      border-left: 4px solid #ff8c42;
-      padding-left: 0.8rem;
-    }
-
-    .episodes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-
-    .episode {
-      background: #2c3245;
-      padding: 0.4rem 1rem;
-      border-radius: 40px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: 0.1s;
-    }
-
-    .episode:hover {
-      background: #ff8c42;
-      color: #0f0f1a;
-    }
-
     .loading {
       text-align: center;
       padding: 3rem;
       font-size: 1.2rem;
       color: #aaa;
     }
-
     .error {
       color: #ff8a7a;
       background: #2a1215;
@@ -211,22 +122,15 @@
       border-radius: 1rem;
       text-align: center;
     }
-
     footer {
       text-align: center;
       margin-top: 3rem;
       color: #5a5f72;
       font-size: 0.8rem;
     }
-
     @media (max-width: 640px) {
-      .container {
-        padding: 0 1rem;
-      }
-      .movies-grid {
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      }
+      .container { padding: 0 1rem; }
+      .movies-grid { gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     }
   </style>
 </head>
@@ -244,26 +148,21 @@
   <div class="loading">Загрузка популярных фильмов...</div>
 </main>
 <footer class="container">
-  ⚠️ Данные получены с hdkinoteatr.com. Приложение создано в технических целях.
+  ⚠️ При клике на фильм вы перейдёте на сайт hdkinoteatr.com. Приложение создано в технических целях.
 </footer>
 
 <script>
-  // DOM элементы
   const appEl = document.getElementById('app');
   const searchInput = document.getElementById('searchInput');
   const searchBtn = document.getElementById('searchBtn');
 
-  let currentView = 'catalog'; // 'catalog', 'player'
-  let currentMovieId = null;
-
-  // Загрузка каталога
   async function loadCatalog() {
     showLoading();
     try {
       const res = await fetch('/api/movies');
       if (!res.ok) throw new Error('Ошибка сервера');
       const movies = await res.json();
-      if (movies.length === 0) {
+      if (!movies.length) {
         appEl.innerHTML = '<div class="error">Не удалось загрузить список фильмов. Возможно, сайт изменил структуру.</div>';
         return;
       }
@@ -273,7 +172,6 @@
     }
   }
 
-  // Поиск
   async function searchMovies(query) {
     if (!query.trim()) {
       loadCatalog();
@@ -283,7 +181,7 @@
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
       const movies = await res.json();
-      if (movies.length === 0) {
+      if (!movies.length) {
         appEl.innerHTML = '<div class="error">Ничего не найдено. Попробуйте другой запрос.</div>';
         return;
       }
@@ -293,14 +191,12 @@
     }
   }
 
-  // Отрисовка сетки карточек
   function renderMoviesGrid(movies) {
-    currentView = 'catalog';
     const html = `
       <div class="movies-grid">
         ${movies.map(movie => `
-          <div class="movie-card" data-id="${movie.id}" data-link="${movie.link || ''}">
-            <img class="poster" src="${movie.poster || '/placeholder.jpg'}" alt="${escapeHtml(movie.title)}" loading="lazy" onerror="this.src='/placeholder.jpg'">
+          <div class="movie-card" data-link="${escapeHtml(movie.link)}">
+            <img class="poster" src="${escapeHtml(movie.poster)}" alt="${escapeHtml(movie.title)}" loading="lazy" onerror="this.src='/placeholder.jpg'">
             <div class="info">
               <div class="title">${escapeHtml(movie.title)}</div>
               <div class="meta">
@@ -313,95 +209,11 @@
       </div>
     `;
     appEl.innerHTML = html;
-
-    // Вешаем обработчики на карточки
+    // Вешаем обработчик: открытие страницы фильма в новой вкладке
     document.querySelectorAll('.movie-card').forEach(card => {
-      card.addEventListener('click', async (e) => {
-        const id = card.dataset.id;
-        if (id) await openPlayer(id);
-      });
-    });
-  }
-
-  // Открыть плеер с деталями фильма/сериала
-  async function openPlayer(id) {
-    showLoading();
-    try {
-      const res = await fetch(`/api/movie/${id}`);
-      if (!res.ok) throw new Error('Не удалось загрузить страницу');
-      const data = await res.json();
-      if (data.type === 'movie') {
-        renderMoviePlayer(data.iframeSrc);
-      } else if (data.type === 'series') {
-        renderSeriesPlayer(data.seasons, data.iframeSrc);
-      } else {
-        throw new Error('Неизвестный тип контента');
-      }
-      currentMovieId = id;
-      currentView = 'player';
-    } catch (err) {
-      appEl.innerHTML = `<div class="error">Ошибка загрузки плеера: ${err.message}</div>`;
-    }
-  }
-
-  function renderMoviePlayer(iframeSrc) {
-    const playerHtml = `
-      <button class="back-button" id="backToCatalog">← Назад к списку</button>
-      <div class="player-view">
-        ${iframeSrc ? `<iframe src="${iframeSrc}" allowfullscreen></iframe>` : '<div class="error">Плеер не найден на странице</div>'}
-      </div>
-    `;
-    appEl.innerHTML = playerHtml;
-    document.getElementById('backToCatalog')?.addEventListener('click', () => loadCatalog());
-  }
-
-  function renderSeriesPlayer(seasons, fallbackIframe) {
-    let seasonsHtml = `<button class="back-button" id="backToCatalog">← Назад к списку</button>`;
-    if (fallbackIframe) {
-      seasonsHtml += `<div class="player-view"><iframe src="${fallbackIframe}" allowfullscreen></iframe></div>`;
-    }
-    seasonsHtml += `<div class="seasons">`;
-    for (const season of seasons) {
-      seasonsHtml += `
-        <div class="season">
-          <div class="season-title">${escapeHtml(season.name)}</div>
-          <div class="episodes">
-            ${season.episodes.map((ep, idx) => `
-              <div class="episode" data-link="${ep.link || ''}">
-                ${escapeHtml(ep.title)}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-    seasonsHtml += `</div>`;
-    appEl.innerHTML = seasonsHtml;
-    document.getElementById('backToCatalog')?.addEventListener('click', () => loadCatalog());
-
-    // Обработка кликов по сериям – загружаем плеер серии
-    document.querySelectorAll('.episode').forEach(epEl => {
-      epEl.addEventListener('click', async () => {
-        const link = epEl.dataset.link;
-        if (link) {
-          // Для серии нужно получить её страницу и извлечь iframe
-          showLoading();
-          try {
-            const res = await fetch(`/api/movie/${btoa(link)}`);
-            const data = await res.json();
-            if (data.type === 'movie' && data.iframeSrc) {
-              renderMoviePlayer(data.iframeSrc);
-            } else if (data.iframeSrc) {
-              renderMoviePlayer(data.iframeSrc);
-            } else {
-              appEl.innerHTML += `<div class="error">Не удалось загрузить серию</div>`;
-            }
-          } catch (err) {
-            appEl.innerHTML += `<div class="error">Ошибка загрузки серии</div>`;
-          }
-        } else {
-          alert('Ссылка на серию не найдена');
-        }
+      card.addEventListener('click', () => {
+        const link = card.dataset.link;
+        if (link) window.open(link, '_blank');
       });
     });
   }
@@ -420,13 +232,11 @@
     });
   }
 
-  // Обработчики событий
   searchBtn.addEventListener('click', () => searchMovies(searchInput.value));
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') searchMovies(searchInput.value);
   });
 
-  // Загрузка каталога при старте
   loadCatalog();
 </script>
 </body>
