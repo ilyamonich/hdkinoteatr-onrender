@@ -1,0 +1,18 @@
+{
+    "headline": "HDKinoTeatr Viewer",
+    "action": "link:https://hdkinoteatr-onrender.onrender.com/",
+    "pages": [
+        {
+            "items": [
+                {
+                    "layout": "0,0,6,4",
+                    "color": "transparent",
+                    "image": "https://hdkinoteatr-onrender.onrender.com/icon.png",
+                    "label": "HDKinoTeatr",
+                    "action": "reload",
+                    "description": "Фильмы и сериалы онлайн"
+                }
+            ]
+        }
+    ]
+}
