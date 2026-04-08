@@ -8,13 +8,18 @@ app.use(express.static('public'));
 
 const BASE_URL = 'https://www.hdkinoteatr.com';
 const CATALOG_URL = process.env.CATALOG_URL || `${BASE_URL}/catalog/`;
-const SEARCH_URL_TEMPLATE = process.env.SEARCH_URL_TEMPLATE || `${BASE_URL}/index.php?do=search&subaction=search&q={query}`;
 
-async function fetchHTML(url) {
+// Универсальная функция загрузки (GET/POST)
+async function fetchHTML(url, options = {}) {
   try {
-    const response = await axios.get(url, {
+    const response = await axios({
+      method: options.method || 'GET',
+      url: url,
+      data: options.data || null,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...options.headers
       },
       timeout: 15000
     });
@@ -25,7 +30,21 @@ async function fetchHTML(url) {
   }
 }
 
-// Универсальная функция парсинга списка фильмов (из #dle-content)
+// Функция поиска через POST (как на сайте)
+async function searchMovies(query) {
+  const formData = new URLSearchParams();
+  formData.append('do', 'search');
+  formData.append('subaction', 'search');
+  formData.append('story', query);
+  const html = await fetchHTML(BASE_URL, {
+    method: 'POST',
+    data: formData.toString(),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
+  return html;
+}
+
+// Парсинг списка фильмов (общий для каталога, категорий и поиска)
 function parseMoviesList(html) {
   const $ = cheerio.load(html);
   const movies = [];
@@ -59,32 +78,6 @@ function parseMoviesList(html) {
     });
   });
 
-  if (movies.length === 0) {
-    // fallback: универсальный поиск
-    $('a').each((i, el) => {
-      const $a = $(el);
-      const $img = $a.find('img');
-      if ($img.length === 0) return;
-      let link = $a.attr('href');
-      if (!link) return;
-      if (link.startsWith('/')) link = BASE_URL + link;
-      if (!link.startsWith('http')) return;
-      if (link.includes('/uploads/') || link.match(/\.(jpg|png|gif|jpeg|webp)$/i)) return;
-      let title = $a.attr('title') || $img.attr('alt') || $a.text().trim();
-      if (!title) return;
-      let poster = $img.attr('src');
-      if (poster && poster.startsWith('/')) poster = BASE_URL + poster;
-      movies.push({
-        id: Buffer.from(link, 'utf8').toString('base64'),
-        title,
-        poster: poster || '/placeholder.jpg',
-        year: '—',
-        rating: '—',
-        link
-      });
-    });
-  }
-
   // Удаляем дубликаты
   const unique = [];
   const seen = new Set();
@@ -98,7 +91,7 @@ function parseMoviesList(html) {
   return unique.slice(0, 60);
 }
 
-// Парсинг категорий из левой колонки (главная страница или любая страница с leftcol)
+// Парсинг категорий из левой колонки (главная страница)
 async function fetchCategories() {
   const html = await fetchHTML(BASE_URL);
   if (!html) return [];
@@ -109,20 +102,19 @@ async function fetchCategories() {
     let link = $a.attr('href');
     if (link && link.startsWith('/')) link = BASE_URL + link;
     const name = $a.text().trim();
-    if (name && link && !link.includes('/year/')) { // исключаем года
+    if (name && link && !link.includes('/year/')) {
       categories.push({ name, link });
     }
   });
   return categories;
 }
 
-// API: категории
+// ---------- API маршруты ----------
 app.get('/api/categories', async (req, res) => {
   const cats = await fetchCategories();
   res.json(cats);
 });
 
-// API: фильмы по категории (по ссылке категории)
 app.get('/api/category', async (req, res) => {
   let url = req.query.url;
   if (!url) return res.status(400).json({ error: 'Missing url' });
@@ -134,18 +126,15 @@ app.get('/api/category', async (req, res) => {
   res.json(movies);
 });
 
-// API: поиск
 app.get('/api/search', async (req, res) => {
   const query = req.query.q;
   if (!query) return res.json([]);
-  const searchUrl = SEARCH_URL_TEMPLATE.replace('{query}', encodeURIComponent(query));
-  const html = await fetchHTML(searchUrl);
+  const html = await searchMovies(query);
   if (!html) return res.json([]);
   const movies = parseMoviesList(html);
   res.json(movies);
 });
 
-// API: каталог (главная страница /catalog/)
 app.get('/api/movies', async (req, res) => {
   const html = await fetchHTML(CATALOG_URL);
   if (!html) return res.status(500).json({ error: 'Не удалось загрузить каталог' });
