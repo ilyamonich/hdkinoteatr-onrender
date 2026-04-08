@@ -1,161 +1,57 @@
 const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const path = require('path');
 
+dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Раздаём статические файлы из public (ваше веб-приложение)
-app.use(express.static('public'));
+// Middleware
+app.use(cors());
+app.options('*', cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Раздаём файлы из папки msx по пути /msx (для start.json и content.json)
-app.use('/msx', express.static('msx'));
-
-const BASE_URL = 'https://www.hdkinoteatr.com';
-const CATALOG_URL = process.env.CATALOG_URL || `${BASE_URL}/catalog/`;
-
-// Универсальная функция загрузки (GET/POST)
-async function fetchHTML(url, options = {}) {
-  try {
-    const response = await axios({
-      method: options.method || 'GET',
-      url: url,
-      data: options.data || null,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        ...options.headers
-      },
-      timeout: 15000
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Ошибка загрузки ${url}:`, error.message);
-    return null;
-  }
-}
-
-// Функция поиска через POST (эмуляция формы поиска)
-async function searchMovies(query) {
-  const formData = new URLSearchParams();
-  formData.append('do', 'search');
-  formData.append('subaction', 'search');
-  formData.append('story', query);
-  formData.append('search_start', '0');
-  const html = await fetchHTML(`${BASE_URL}/index.php?do=search`, {
-    method: 'POST',
-    data: formData.toString(),
-    headers: {
-      'Referer': BASE_URL,
-      'Origin': BASE_URL
-    }
-  });
-  return html;
-}
-
-// Универсальный парсер списка фильмов (работает и для каталога, и для поиска)
-function parseMoviesList(html) {
-  const $ = cheerio.load(html);
-  const movies = [];
-
-  // Ищем карточки .base.shortstory (как в каталоге, так и в поиске)
-  $('.base.shortstory').each((i, el) => {
-    const $card = $(el);
-    // Пробуем найти ссылку в h2.btl a (каталог) или h3.btl a (поиск)
-    let $titleLink = $card.find('h2.btl a').first();
-    if ($titleLink.length === 0) {
-      $titleLink = $card.find('h3.btl a').first();
-    }
-    let link = $titleLink.attr('href');
-    if (!link) return;
-    if (link.startsWith('/')) link = BASE_URL + link;
-    else if (!link.startsWith('http')) link = BASE_URL + '/' + link;
-
-    let title = $titleLink.text().trim();
-    if (!title) return;
-
-    let poster = $card.find('.img img').first().attr('src');
-    if (poster && poster.startsWith('/')) poster = BASE_URL + poster;
-
-    let year = '—';
-    const yearMatch = title.match(/(\d{4})/);
-    if (yearMatch) year = yearMatch[1];
-
-    movies.push({
-      id: Buffer.from(link, 'utf8').toString('base64'),
-      title,
-      poster: poster || '/placeholder.jpg',
-      year,
-      rating: '—',
-      link
-    });
-  });
-
-  // Удаляем дубликаты
-  const unique = [];
-  const seen = new Set();
-  for (const m of movies) {
-    if (!seen.has(m.link)) {
-      seen.add(m.link);
-      unique.push(m);
-    }
-  }
-  console.log(`Найдено фильмов: ${unique.length}`);
-  return unique.slice(0, 60);
-}
-
-// Парсинг категорий из левой колонки (главная страница)
-async function fetchCategories() {
-  const html = await fetchHTML(BASE_URL);
-  if (!html) return [];
-  const $ = cheerio.load(html);
-  const categories = [];
-  $('.leftcol .cats li a').each((i, el) => {
-    const $a = $(el);
-    let link = $a.attr('href');
-    if (link && link.startsWith('/')) link = BASE_URL + link;
-    const name = $a.text().trim();
-    if (name && link && !link.includes('/year/')) {
-      categories.push({ name, link });
-    }
-  });
-  return categories;
-}
-
-// ---------- API маршруты ----------
-app.get('/api/categories', async (req, res) => {
-  const cats = await fetchCategories();
-  res.json(cats);
+// Логирование запросов
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
 });
 
-app.get('/api/category', async (req, res) => {
-  let url = req.query.url;
-  if (!url) return res.status(400).json({ error: 'Missing url' });
-  if (url.startsWith('/')) url = BASE_URL + url;
-  if (!url.startsWith(BASE_URL)) url = BASE_URL + url;
-  const html = await fetchHTML(url);
-  if (!html) return res.status(500).json({ error: 'Не удалось загрузить категорию' });
-  const movies = parseMoviesList(html);
-  res.json(movies);
+// Статические файлы: веб-приложение (для браузера)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Статические файлы для MSX (start.json, content.json, иконки)
+app.use('/msx', express.static(path.join(__dirname, 'msx')));
+
+// API роуты (парсинг hdkinoteatr.com)
+const apiRouter = require('./routes/api');
+app.use('/api', apiRouter);
+
+// Корневой маршрут – отдаём веб-приложение (public/index.html)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/api/search', async (req, res) => {
-  const query = req.query.q;
-  if (!query) return res.json([]);
-  const html = await searchMovies(query);
-  if (!html) return res.json([]);
-  const movies = parseMoviesList(html);
-  res.json(movies);
+// Проверка статуса
+app.get('/status', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
 });
 
-app.get('/api/movies', async (req, res) => {
-  const html = await fetchHTML(CATALOG_URL);
-  if (!html) return res.status(500).json({ error: 'Не удалось загрузить каталог' });
-  const movies = parseMoviesList(html);
-  res.json(movies);
+// Обработка 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Глобальный обработчик ошибок
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
-  console.log(`Каталог: ${CATALOG_URL}`);
+  console.log(`✅ Сервер запущен на порту ${PORT}`);
+  console.log(`👉 Стартовый параметр MSX: https://hdkinoteatr-msx.onrender.com/msx/start.json`);
+  console.log(`👉 Веб-приложение: https://hdkinoteatr-msx.onrender.com/`);
 });
