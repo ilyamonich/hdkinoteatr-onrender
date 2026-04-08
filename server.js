@@ -29,29 +29,27 @@ function parseMoviesList(html) {
   const $ = cheerio.load(html);
   const movies = [];
 
-  // 1. Ищем карточки в типичных блоках DLE
-  $('.short-items .item, .content .item, .items .item, .movie-item, .film-item').each((i, el) => {
-    const $item = $(el);
-    // Ищем ссылку внутри карточки
-    const $link = $item.find('a').first();
-    let link = $link.attr('href');
+  // Ищем все карточки фильмов (на странице /catalog/ они имеют класс base shortstory)
+  $('.base.shortstory').each((i, el) => {
+    const $card = $(el);
+    // Ссылка на страницу фильма находится в h2.btl > a
+    const $titleLink = $card.find('h2.btl a').first();
+    let link = $titleLink.attr('href');
     if (!link) return;
     if (link.startsWith('/')) link = BASE_URL + link;
-    if (!link.startsWith('http')) link = BASE_URL + '/' + link;
-    // Отбрасываем мусор
-    if (link.includes('/uploads/') || link.match(/\.(jpg|png|gif|jpeg|webp)$/i)) return;
-    if (link === BASE_URL || link === BASE_URL + '/') return;
-    
-    let title = $link.attr('title') || $link.find('.title, h3').text().trim() || $link.text().trim();
-    if (!title) title = $item.find('.title, h3').first().text().trim();
+    else if (!link.startsWith('http')) link = BASE_URL + '/' + link;
+    // Название фильма
+    let title = $titleLink.text().trim();
     if (!title) return;
-    
-    let poster = $item.find('img').first().attr('src');
+    // Постер: в .img img
+    let poster = $card.find('.img img').first().attr('src');
     if (poster && poster.startsWith('/')) poster = BASE_URL + poster;
-    
-    let year = $item.find('.year, .date').first().text().trim() || '—';
-    let rating = $item.find('.rating, .imdb').first().text().trim() || '—';
-    
+    // Год (часто в заголовке в скобках) – можно извлечь, но не обязательно
+    let year = '—';
+    const yearMatch = title.match(/(\d{4})/);
+    if (yearMatch) year = yearMatch[1];
+    // Рейтинг (можно поискать, но оставим пока '—')
+    let rating = '—';
     movies.push({
       id: Buffer.from(link, 'utf8').toString('base64'),
       title,
@@ -61,27 +59,25 @@ function parseMoviesList(html) {
       link
     });
   });
-  
-  // 2. Если не нашли – ищем все ссылки, которые ведут на /series/ или /film/ (признак страницы фильма)
+
+  // Если не нашли карточки – пробуем универсальный метод (на всякий случай)
   if (movies.length === 0) {
+    console.log('Не найдено .base.shortstory, пробуем универсальный поиск...');
     $('a').each((i, el) => {
       const $a = $(el);
+      const $img = $a.find('img');
+      if ($img.length === 0) return;
       let link = $a.attr('href');
       if (!link) return;
       if (link.startsWith('/')) link = BASE_URL + link;
       if (!link.startsWith('http')) return;
-      // Фильтруем: только ссылки, содержащие /series/ или /film/ или цифровой ID
-      if (!link.match(/\/(series|film|movie)\//) && !link.match(/\/\d+-[a-z0-9-]+\.html/)) return;
-      if (link.includes('/uploads/')) return;
-      
-      const $img = $a.find('img');
-      if ($img.length === 0) return;
-      
+      // Игнорируем ссылки на картинки, загрузки, главную
+      if (link.includes('/uploads/') || link.match(/\.(jpg|png|gif|jpeg|webp)$/i)) return;
+      if (link === BASE_URL || link === BASE_URL + '/') return;
       let title = $a.attr('title') || $img.attr('alt') || $a.text().trim();
       if (!title) return;
       let poster = $img.attr('src');
       if (poster && poster.startsWith('/')) poster = BASE_URL + poster;
-      
       movies.push({
         id: Buffer.from(link, 'utf8').toString('base64'),
         title,
@@ -92,8 +88,8 @@ function parseMoviesList(html) {
       });
     });
   }
-  
-  // Удаляем дубликаты
+
+  // Убираем дубликаты
   const unique = [];
   const seen = new Set();
   for (const m of movies) {
@@ -102,11 +98,11 @@ function parseMoviesList(html) {
       unique.push(m);
     }
   }
-  
-  if (unique.length === 0) {
-    console.error('Не найдено ни одной ссылки на фильм. Проверьте структуру страницы.');
+  console.log(`Найдено фильмов: ${unique.length}`);
+  if (unique.length > 0) {
+    console.log(`Пример ссылки: ${unique[0].link}`);
   } else {
-    console.log(`Найдено фильмов: ${unique.length}. Пример: ${unique[0].link}`);
+    console.error('Не найдено ни одного фильма. Проверьте селекторы.');
   }
   return unique.slice(0, 60);
 }
