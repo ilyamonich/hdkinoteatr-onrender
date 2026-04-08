@@ -36,7 +36,6 @@ async function searchMovies(query) {
   formData.append('do', 'search');
   formData.append('subaction', 'search');
   formData.append('story', query);
-  // Добавляем параметр search_start (как в форме)
   formData.append('search_start', '0');
   const html = await fetchHTML(`${BASE_URL}/index.php?do=search`, {
     method: 'POST',
@@ -49,15 +48,19 @@ async function searchMovies(query) {
   return html;
 }
 
-// Парсинг списка фильмов (общий для каталога, категорий и поиска)
+// Универсальный парсер списка фильмов (работает и для каталога, и для поиска)
 function parseMoviesList(html) {
   const $ = cheerio.load(html);
   const movies = [];
 
-  // Основные карточки на странице /catalog/ и в результатах поиска
+  // Ищем карточки .base.shortstory (как в каталоге, так и в поиске)
   $('.base.shortstory').each((i, el) => {
     const $card = $(el);
-    const $titleLink = $card.find('h2.btl a').first();
+    // Пробуем найти ссылку в h2.btl a (каталог) или h3.btl a (поиск)
+    let $titleLink = $card.find('h2.btl a').first();
+    if ($titleLink.length === 0) {
+      $titleLink = $card.find('h3.btl a').first();
+    }
     let link = $titleLink.attr('href');
     if (!link) return;
     if (link.startsWith('/')) link = BASE_URL + link;
