@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,14 +9,13 @@ app.use(express.static('public'));
 
 const BASE_URL = 'https://www.hdkinoteatr.com';
 
-// URL каталога и поиска – можно переопределить через переменные окружения
-// По умолчанию используются актуальные адреса, которые вы указали
+// URL каталога и поиска (можно переопределить через переменные окружения)
 const CATALOG_URL = process.env.CATALOG_URL || `${BASE_URL}/catalog/`;
 const SEARCH_URL_TEMPLATE = process.env.SEARCH_URL_TEMPLATE || `${BASE_URL}/index.php?do=search&subaction=search&q={query}`;
 
-/**
- * Загрузка HTML страницы с нужными заголовками
- */
+// --------------------------------------------------------------
+// 1. Вспомогательная функция загрузки HTML через axios (для списков)
+// --------------------------------------------------------------
 async function fetchHTML(url) {
   try {
     const response = await axios.get(url, {
@@ -31,9 +31,9 @@ async function fetchHTML(url) {
   }
 }
 
-/**
- * Универсальный парсер списка фильмов (ищет любые ссылки с картинками)
- */
+// --------------------------------------------------------------
+// 2. Парсер списка фильмов (работает на статическом HTML)
+// --------------------------------------------------------------
 function parseMoviesList(html, pageUrl) {
   const $ = cheerio.load(html);
   const movies = [];
@@ -67,7 +67,7 @@ function parseMoviesList(html, pageUrl) {
     });
   });
 
-  // Удаляем дубликаты
+  // Убираем дубликаты
   const unique = [];
   const seen = new Set();
   for (const m of movies) {
@@ -79,81 +79,70 @@ function parseMoviesList(html, pageUrl) {
   return unique.slice(0, 60);
 }
 
-/**
- * Парсинг страницы фильма/сериала: поиск iframe, сезонов, серий
- */
+// --------------------------------------------------------------
+// 3. Парсер страницы фильма/сериала с использованием Puppeteer
+// --------------------------------------------------------------
 async function parseMoviePage(url) {
-  const html = await fetchHTML(url);
-  if (!html) {
-    console.error(`Не удалось получить HTML для ${url}`);
-    return null;
-  }
-  const $ = cheerio.load(html);
-
-  // Поиск iframe плеера (различные варианты селекторов)
-  let iframeSrc = null;
-  const iframeCandidates = [
-    'iframe',
-    '.video iframe',
-    '.player iframe',
-    '#player iframe',
-    'div[data-player] iframe',
-    'object[data*=".mp4"]'
-  ];
-  for (const sel of iframeCandidates) {
-    const $iframe = $(sel).first();
-    if ($iframe.length) {
-      iframeSrc = $iframe.attr('src');
-      break;
-    }
-  }
-
-  if (iframeSrc && !iframeSrc.startsWith('http')) {
-    iframeSrc = BASE_URL + (iframeSrc.startsWith('/') ? iframeSrc : '/' + iframeSrc);
-  }
-
-  // Если iframe не найден, ищем video-тег
-  if (!iframeSrc) {
-    const $video = $('video source').first();
-    if ($video.length) {
-      iframeSrc = $video.attr('src');
-    } else {
-      const mp4Link = $('[src$=".mp4"], [data-src$=".mp4"], [src$=".m3u8"]').attr('src');
-      if (mp4Link) iframeSrc = mp4Link;
-    }
-  }
-
-  // Поиск сезонов и серий (для сериалов)
-  const seasons = [];
-  $('.season-block, .seasons-list, .seasons, .series-list, .episodes-list').each((i, block) => {
-    const $block = $(block);
-    $block.find('.season, .season-item, .season-block').each((sIdx, seasonEl) => {
-      const seasonName = $(seasonEl).find('.season-title, .title, h3, h4').first().text().trim() || `Сезон ${sIdx + 1}`;
-      const episodes = [];
-      $(seasonEl).find('.episode, .episode-item, .series-item, .episodes a').each((eIdx, epEl) => {
-        let epTitle = $(epEl).find('.episode-title, .title, span').first().text().trim();
-        if (!epTitle) epTitle = `Серия ${eIdx + 1}`;
-        let epLink = $(epEl).is('a') ? $(epEl).attr('href') : $(epEl).find('a').attr('href');
-        if (epLink && !epLink.startsWith('http')) {
-          epLink = BASE_URL + (epLink.startsWith('/') ? epLink : '/' + epLink);
-        }
-        if (epLink) episodes.push({ title: epTitle, link: epLink });
-      });
-      if (episodes.length) seasons.push({ name: seasonName, episodes });
+  let browser;
+  try {
+    console.log(`[Puppeteer] Загружаем страницу: ${url}`);
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'] // необходимо для работы на Render
     });
-  });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-  if (seasons.length > 0) {
-    return { type: 'series', seasons, iframeSrc: iframeSrc || null };
-  } else if (iframeSrc) {
-    return { type: 'movie', iframeSrc };
-  } else {
-    console.error(`Не найден плеер на странице ${url}`);
+    // Ждём появления iframe (максимум 10 секунд)
+    await page.waitForSelector('iframe', { timeout: 10000 }).catch(() => console.log('Iframe не найден за 10 секунд'));
+
+    // Извлекаем данные из страницы
+    const data = await page.evaluate(() => {
+      let iframeSrc = null;
+      const iframe = document.querySelector('iframe');
+      if (iframe && iframe.src) {
+        iframeSrc = iframe.src;
+      }
+      // Если iframe не найден, пробуем найти video source
+      if (!iframeSrc) {
+        const video = document.querySelector('video source');
+        if (video && video.src) iframeSrc = video.src;
+      }
+      // Парсинг сезонов и серий (для сериалов)
+      const seasons = [];
+      document.querySelectorAll('.season-block, .seasons-list, .seasons').forEach(block => {
+        block.querySelectorAll('.season, .season-item').forEach(seasonEl => {
+          const seasonName = seasonEl.querySelector('.season-title, .title')?.innerText.trim() || `Сезон ${seasons.length + 1}`;
+          const episodes = [];
+          seasonEl.querySelectorAll('.episode, .episode-item, .series-item').forEach(epEl => {
+            let epTitle = epEl.querySelector('.episode-title, .title')?.innerText.trim() || `Серия ${episodes.length + 1}`;
+            let epLink = epEl.querySelector('a')?.href;
+            if (epLink) episodes.push({ title: epTitle, link: epLink });
+          });
+          if (episodes.length) seasons.push({ name: seasonName, episodes });
+        });
+      });
+      return { iframeSrc, seasons };
+    });
+
+    if (data.seasons && data.seasons.length > 0) {
+      return { type: 'series', seasons: data.seasons, iframeSrc: data.iframeSrc || null };
+    } else if (data.iframeSrc) {
+      return { type: 'movie', iframeSrc: data.iframeSrc };
+    } else {
+      console.error(`[Puppeteer] Не удалось найти плеер на странице: ${url}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`[Puppeteer] Ошибка при обработке ${url}:`, error.message);
     return null;
+  } finally {
+    if (browser) await browser.close();
   }
 }
 
-// ---------- API маршруты ----------
+// --------------------------------------------------------------
+// 4. API маршруты
+// --------------------------------------------------------------
 
 // Поиск фильмов
 app.get('/api/search', async (req, res) => {
@@ -200,13 +189,14 @@ app.get('/api/movie/:id', async (req, res) => {
 
   const details = await parseMoviePage(url);
   if (!details) {
-    console.error(`Не удалось распарсить страницу: ${url}`);
     return res.status(404).json({ error: 'Не удалось получить данные со страницы. Возможно, плеер защищён или страница изменилась.' });
   }
   res.json(details);
 });
 
-// Запуск сервера
+// --------------------------------------------------------------
+// 5. Запуск сервера
+// --------------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
   console.log(`Каталог: ${CATALOG_URL}`);
