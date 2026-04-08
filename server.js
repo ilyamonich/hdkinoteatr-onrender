@@ -30,16 +30,21 @@ async function fetchHTML(url, options = {}) {
   }
 }
 
-// Функция поиска через POST (как на сайте)
+// Функция поиска через POST (эмуляция формы поиска)
 async function searchMovies(query) {
   const formData = new URLSearchParams();
   formData.append('do', 'search');
   formData.append('subaction', 'search');
   formData.append('story', query);
-  const html = await fetchHTML(BASE_URL, {
+  // Добавляем параметр search_start (как в форме)
+  formData.append('search_start', '0');
+  const html = await fetchHTML(`${BASE_URL}/index.php?do=search`, {
     method: 'POST',
     data: formData.toString(),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    headers: {
+      'Referer': BASE_URL,
+      'Origin': BASE_URL
+    }
   });
   return html;
 }
@@ -49,6 +54,7 @@ function parseMoviesList(html) {
   const $ = cheerio.load(html);
   const movies = [];
 
+  // Основные карточки на странице /catalog/ и в результатах поиска
   $('.base.shortstory').each((i, el) => {
     const $card = $(el);
     const $titleLink = $card.find('h2.btl a').first();
@@ -67,13 +73,12 @@ function parseMoviesList(html) {
     const yearMatch = title.match(/(\d{4})/);
     if (yearMatch) year = yearMatch[1];
 
-    let rating = '—';
     movies.push({
       id: Buffer.from(link, 'utf8').toString('base64'),
       title,
       poster: poster || '/placeholder.jpg',
       year,
-      rating,
+      rating: '—',
       link
     });
   });
