@@ -1,0 +1,5 @@
+{
+    "name": "hdkinoteatr-viewer",
+    "version": "1.0.0",
+    "parameter": "content:https://hdkinoteatr-onrender.onrender.com/msx/content.json"
+}
