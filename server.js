@@ -59,7 +59,7 @@ async function parseMoviePage(url) {
   if (!html) return null;
   const $ = cheerio.load(html);
   let iframeSrc = null;
-  // Попытка найти iframe
+  // Поиск iframe
   iframeSrc = $('iframe').attr('src');
   if (!iframeSrc) iframeSrc = $('[data-src*="iframe"], [data-url*="player"]').attr('data-src');
   if (!iframeSrc) iframeSrc = $('video source').attr('src');
@@ -70,10 +70,10 @@ async function parseMoviePage(url) {
   if (iframeSrc && !iframeSrc.startsWith('http')) {
     iframeSrc = BASE_URL + (iframeSrc.startsWith('/') ? iframeSrc : '/' + iframeSrc);
   }
-  // Если ничего не нашли – возвращаем ссылку на всю страницу (чтобы показать в iframe)
+  // Если ничего не нашли – показываем всю страницу фильма в iframe
   if (!iframeSrc) iframeSrc = url;
   
-  // Парсинг сезонов (упрощённо)
+  // Парсинг сезонов (для сериалов)
   const seasons = [];
   $('.season-block, .seasons-list').each((i, block) => {
     $(block).find('.season, .season-item').each((sIdx, seasonEl) => {
