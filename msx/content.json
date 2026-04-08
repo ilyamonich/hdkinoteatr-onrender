@@ -1,15 +1,15 @@
 {
     "headline": "HDKinoTeatr Viewer",
-    "action": "link:https://hdkinoteatr-msx.onrender.com/",
+    "action": "link:https://hdkinoteatr-onrender.onrender.com/",
     "pages": [
         {
             "items": [
                 {
                     "layout": "0,0,6,4",
                     "color": "transparent",
-                    "image": "https://hdkinoteatr-msx.onrender.com/icon.png",
+                    "image": "https://hdkinoteatr-onrender.onrender.com/icon.png",
                     "label": "HDKinoTeatr",
-                    "action": "link:https://hdkinoteatr-msx.onrender.com/",
+                    "action": "link:https://hdkinoteatr-onrender.onrender.com/",
                     "description": "Фильмы и сериалы онлайн"
                 }
             ]
